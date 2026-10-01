@@ -1,0 +1,45 @@
+# Build outputs
+bin/
+obj/
+out/
+publish/
+
+# .NET
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Flutter
+apps/mobile/build/
+apps/mobile/.dart_tool/
+apps/mobile/.flutter-plugins*
+apps/mobile/android/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/app/build/
+apps/mobile/linux/build/
+apps/mobile/windows/build/
+apps/mobile/macos/build/
+**/generated/
+
+# Node / Vite
+node_modules/
+apps/web/dist/
+
+# Env / secrets
+.env
+.env.local
+apps/web/.env
+*.pfx
+*.key
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Docker volumes / local data
+pgdata/
+wwwroot/uploads/

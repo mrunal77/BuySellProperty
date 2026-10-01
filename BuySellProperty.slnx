@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Api/Api.csproj" />
+    <Project Path="src/BuildingBlocks/BuildingBlocks.csproj" />
+    <Project Path="src/Infrastructure/Infrastructure.csproj" />
+    <Project Path="src/SharedKernel/SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/Identity/Identity.csproj" />
+    <Project Path="src/Modules/Locations/Locations.csproj" />
+    <Project Path="src/Modules/Properties/Properties.csproj" />
+    <Project Path="src/Modules/Users/Users.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Api.IntegrationTests/Api.IntegrationTests.csproj" />
+    <Project Path="tests/Identity.UnitTests/Identity.UnitTests.csproj" />
+    <Project Path="tests/Properties.UnitTests/Properties.UnitTests.csproj" />
+  </Folder>
+</Solution>
