@@ -31,6 +31,8 @@ public sealed class Property : Entity
     public double Longitude { get; private set; }
     public DateTimeOffset? PublishedAt { get; private set; }
     public string? RejectionReason { get; private set; }
+    public List<string> ImageUrls { get; private set; } = [];
+    public List<string> Amenities { get; private set; } = [];
 
     private Property() { }
 
@@ -40,7 +42,8 @@ public sealed class Property : Entity
         Guid cityId, double lat, double lng,
         int? bedrooms = null, int? bathrooms = null,
         Furnishing furnishing = Furnishing.Unfurnished,
-        Guid? localityId = null, int? floor = null, int? totalFloors = null, string? facing = null)
+        Guid? localityId = null, int? floor = null, int? totalFloors = null, string? facing = null,
+        List<string>? imageUrls = null, List<string>? amenities = null)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 200)
             return Result<Property>.Failure(Error.Validation("property.invalid_title", "Title must be 1..200 chars."));
@@ -58,6 +61,7 @@ public sealed class Property : Entity
             LocalityId = localityId, Latitude = lat, Longitude = lng,
             Bedrooms = bedrooms, Bathrooms = bathrooms, Furnishing = furnishing,
             Floor = floor, TotalFloors = totalFloors, Facing = facing,
+            ImageUrls = imageUrls ?? [], Amenities = amenities ?? []
         });
     }
 
@@ -77,10 +81,13 @@ public sealed class Property : Entity
     private static Result Cant(string op) => Result.Failure(Error.Conflict("property.invalid_transition", $"Cannot {op} in current status."));
 
     public void Update(string title, string description, decimal price, double areaSqft,
-        int? beds, int? baths, Furnishing furnishing, string addressLine)
+        int? beds, int? baths, Furnishing furnishing, string addressLine,
+        List<string>? imageUrls = null, List<string>? amenities = null)
     {
         Title = title; Description = description; Price = price; AreaSqft = areaSqft;
         Bedrooms = beds; Bathrooms = baths; Furnishing = furnishing; AddressLine = addressLine;
+        if (imageUrls is not null) ImageUrls = imageUrls;
+        if (amenities is not null) Amenities = amenities;
         Touch();
     }
 
@@ -92,3 +99,4 @@ public sealed record SearchPropertiesQuery(
     decimal? MinPrice, decimal? MaxPrice, int? Beds, int? Baths,
     double? MinArea, double? MaxArea, double? Lat, double? Lng, double? RadiusKm,
     string Sort, int Page, int PageSize);
+

@@ -9,10 +9,11 @@ import '../features/property_detail/presentation/property_detail_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/owner_dashboard/presentation/owner_dashboard_screen.dart';
 import '../features/listing_editor/presentation/listing_editor_screen.dart';
+import '../features/agent_dashboard/presentation/agent_dashboard_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 
 const _authRoutes = ['/login', '/register'];
-const _listerRoutes = ['/owner', '/owner/new'];
+const _listerRoutes = ['/owner', '/owner/new', '/agent'];
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authStoreProvider);
@@ -41,11 +42,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => SearchScreen(
           initialListingType: s.uri.queryParameters['listingType'],
           initialType: s.uri.queryParameters['type'],
+          initialCity: s.uri.queryParameters['city'],
         ),
       ),
       GoRoute(path: '/p/:id', builder: (_, s) => PropertyDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/saved', builder: (_, __) => const FavoritesScreen()),
       GoRoute(path: '/owner', builder: (_, __) => const OwnerDashboardScreen()),
+      GoRoute(path: '/agent', builder: (_, __) => const AgentDashboardScreen()),
       GoRoute(path: '/owner/new', builder: (_, __) => const ListingEditorScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     ],

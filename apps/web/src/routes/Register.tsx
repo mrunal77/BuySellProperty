@@ -113,10 +113,10 @@ export function RegisterPage() {
 
           <div>
             <TextField
-              label="Mobile" type="tel" autoComplete="tel" placeholder="+91 98765 43210"
+              label="Mobile (Optional)" type="tel" autoComplete="tel" placeholder="+91 98765 43210"
               value={phone} onChange={(e) => { setPhone(e.target.value); setCodeSent(false); }}
               error={errors.phone}
-              hint={phoneVerified ? undefined : 'Verify your number with OTP — like 99acres, it keeps enquiries genuine.'}
+              hint={phoneVerified ? undefined : 'Optional when registering with email. Verifying with OTP helps keep enquiries genuine.'}
             />
             {phoneVerified ? (
               <p className="mt-2"><Badge tone="green">✓ Mobile verified</Badge></p>

@@ -4,6 +4,8 @@ import 'validators.dart';
 
 /// Shared browse UI: property cards, section titles, bottom nav.
 
+import 'network.dart';
+
 const _grads = [
   [Color(0xFF006244), Color(0xFF014434)],
   [Color(0xFF0369A1), Color(0xFF312E81)],
@@ -31,6 +33,13 @@ class PropertyCard extends StatelessWidget {
     final id = p['id'].toString();
     final title = (p['title'] ?? '') as String;
     final g = _gradFor(id);
+
+    final rawImages = p['imageUrls'] ?? p['image_urls'];
+    List<String> images = [];
+    if (rawImages is List) {
+      images = rawImages.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+    }
+
     return SizedBox(
       width: width,
       child: Card(
@@ -40,19 +49,52 @@ class PropertyCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 120,
-                decoration: BoxDecoration(gradient: LinearGradient(colors: g)),
-                child: Center(
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white24,
-                    child: Text(
-                      title.isEmpty ? 'B' : title[0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
+              if (images.isNotEmpty)
+                SizedBox(
+                  height: 140,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Image.network(
+                          normalizeImageUrl(images.first),
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) => _buildFallbackHeader(title, g),
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: Colors.grey.shade200,
+                              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            );
+                          },
+                        ),
+                      ),
+                      if (images.length > 1)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.photo_library, color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text('${images.length}',
+                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-              ),
+                )
+              else
+                _buildFallbackHeader(title, g),
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -72,6 +114,23 @@ class PropertyCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackHeader(String title, List<Color> g) {
+    return Container(
+      height: 140,
+      width: double.infinity,
+      decoration: BoxDecoration(gradient: LinearGradient(colors: g)),
+      child: Center(
+        child: CircleAvatar(
+          backgroundColor: Colors.white24,
+          child: Text(
+            title.isEmpty ? 'B' : title[0].toUpperCase(),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
       ),

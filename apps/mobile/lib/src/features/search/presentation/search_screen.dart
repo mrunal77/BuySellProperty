@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/properties_api.dart';
 import '../../../core/browse_widgets.dart';
 
+import 'package:go_router/go_router.dart';
+
 class SearchScreen extends ConsumerStatefulWidget {
   final String? initialListingType;
   final String? initialType;
@@ -21,7 +23,14 @@ class _SearchState extends ConsumerState<SearchScreen> {
     final q = PropertyQuery(listingType: listingType, type: type, beds: beds);
     final props = ref.watch(propertySearchProvider(q));
     return Scaffold(
-      appBar: AppBar(title: const Text('Search properties')),
+      appBar: AppBar(
+        title: const Text('Search properties'),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/home'),
+        ),
+      ),
       body: Column(
         children: [
           SingleChildScrollView(

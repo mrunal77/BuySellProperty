@@ -6,7 +6,8 @@ namespace Properties.Application;
 public sealed record CreatePropertyRequest(
     string Title, string Description, PropertyType PropertyType, ListingType ListingType,
     decimal Price, double AreaSqft, string AddressLine, Guid CityId, double Latitude, double Longitude,
-    Guid? LocalityId, int? Bedrooms, int? Bathrooms, Furnishing Furnishing);
+    Guid? LocalityId, int? Bedrooms, int? Bathrooms, Furnishing Furnishing,
+    List<string>? ImageUrls = null, List<string>? Amenities = null);
 
 public sealed class CreatePropertyValidator : AbstractValidator<CreatePropertyRequest>
 {

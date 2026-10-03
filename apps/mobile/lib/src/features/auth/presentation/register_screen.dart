@@ -156,7 +156,7 @@ class _RegisterState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: 12),
                   AppTextField(
                     controller: _phone,
-                    label: 'Mobile',
+                    label: 'Mobile (Optional)',
                     hint: '+91 98765 43210',
                     keyboardType: TextInputType.phone,
                     validator: phoneValidator,

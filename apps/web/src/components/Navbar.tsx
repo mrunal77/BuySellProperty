@@ -27,6 +27,7 @@ export function Navbar() {
           <NavLink to="/" className={({ isActive }) => linkCls(isActive)}>Home</NavLink>
           <NavLink to="/search" className={({ isActive }) => linkCls(isActive)}>Buy</NavLink>
           <NavLink to="/search?listingType=Rent" className={() => linkCls(false)}>Rent</NavLink>
+          {session && <NavLink to="/favorites" className={({ isActive }) => linkCls(isActive)}>Saved</NavLink>}
           {isLister && <NavLink to="/dashboard" className={({ isActive }) => linkCls(isActive)}>Dashboard</NavLink>}
           {session?.roles.includes('Admin') && <NavLink to="/admin" className={({ isActive }) => linkCls(isActive)}>Admin</NavLink>}
         </nav>

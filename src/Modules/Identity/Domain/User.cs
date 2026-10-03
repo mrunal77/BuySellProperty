@@ -41,7 +41,7 @@ public sealed class User : Entity
             Email = email.Trim().ToLowerInvariant(),
             PasswordHash = passwordHash,
             UserType = userType,
-            Phone = phone,
+            Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(),
             UserRoles = roleList,
         });
     }

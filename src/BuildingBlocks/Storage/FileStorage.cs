@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Options;
+
 namespace BuildingBlocks.Storage;
 
 public interface IFileStorage
@@ -6,7 +9,7 @@ public interface IFileStorage
     Task<string> SaveAsync(Stream stream, string fileName, string contentType, CancellationToken ct = default);
 }
 
-public sealed class LocalDiskStorage(Microsoft.Extensions.Options.IOptions<StorageOptions> options) : IFileStorage
+public sealed class LocalDiskStorage(IOptions<StorageOptions> options, IWebHostEnvironment env) : IFileStorage
 {
     private readonly StorageOptions _options = options.Value;
 
@@ -15,9 +18,10 @@ public sealed class LocalDiskStorage(Microsoft.Extensions.Options.IOptions<Stora
 
     public async Task<string> SaveAsync(Stream stream, string fileName, string contentType, CancellationToken ct = default)
     {
-        var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+        var dir = Path.Combine(webRoot, "uploads");
         Directory.CreateDirectory(dir);
-        var key = $"{Guid.NewGuid():N}_{fileName}";
+        var key = $"{Guid.NewGuid():N}_{Path.GetFileName(fileName)}";
         var path = Path.Combine(dir, key);
         await using var fs = File.Create(path);
         await stream.CopyToAsync(fs, ct);

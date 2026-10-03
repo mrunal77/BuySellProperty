@@ -10,19 +10,23 @@ export function SearchPage() {
 
   const [listingType, setListingType] = useState(params.get('listingType') ?? '');
   const [cityId, setCityId] = useState(params.get('cityId') ?? '');
+  const [city, setCity] = useState(params.get('city') ?? '');
   const [type, setType] = useState(params.get('type') ?? '');
   const [beds, setBeds] = useState(params.get('beds') ?? '');
   const [maxPrice, setMaxPrice] = useState(params.get('maxPrice') ?? '');
   const [sort, setSort] = useState('newest');
 
+  const selectedCityId = cityId || (cities.find(c => c.name.toLowerCase() === city.toLowerCase())?.id ?? '');
+
   const filters = useMemo(() => ({
     listingType: listingType || undefined,
-    cityId: cityId || undefined,
+    cityId: selectedCityId || undefined,
+    city: !selectedCityId && city ? city : undefined,
     type: type || undefined,
     beds: beds ? Number(beds) : undefined,
     maxPrice: maxPrice ? Number(maxPrice) : undefined,
     sort, pageSize: 24,
-  }), [listingType, cityId, type, beds, maxPrice, sort]);
+  }), [listingType, selectedCityId, city, type, beds, maxPrice, sort]);
 
   const { data, isLoading, isError, refetch } = useProperties(filters);
   const items = data?.data ?? [];
@@ -45,9 +49,18 @@ export function SearchPage() {
         <select aria-label="Purpose" value={listingType} onChange={(e) => { setListingType(e.target.value); syncUrl({ listingType: e.target.value }); }} className={sel}>
           <option value="">Buy + Rent</option><option value="Sale">Buy</option><option value="Rent">Rent</option><option value="Lease">Lease</option>
         </select>
-        <select aria-label="City" value={cityId} onChange={(e) => { setCityId(e.target.value); syncUrl({ cityId: e.target.value }); }} className={sel}>
+        <select aria-label="City" value={selectedCityId} onChange={(e) => { 
+          const val = e.target.value; 
+          setCityId(val); 
+          setCity(''); 
+          syncUrl({ cityId: val, city: '' }); 
+        }} className={sel}>
           <option value="">All cities</option>
-          {cities.map((c: { id: string; name: string }) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name} ({c.propertyCount ?? 0})
+            </option>
+          ))}
         </select>
         <select aria-label="Type" value={type} onChange={(e) => { setType(e.target.value); syncUrl({ type: e.target.value }); }} className={sel}>
           <option value="">All types</option>
@@ -64,8 +77,8 @@ export function SearchPage() {
         <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)} className={sel}>
           <option value="newest">Newest</option><option value="price_asc">Price ↑</option><option value="price_desc">Price ↓</option><option value="area_desc">Area ↓</option>
         </select>
-        {(listingType || cityId || type || beds || maxPrice) && (
-          <Button variant="ghost" onClick={() => { setListingType(''); setCityId(''); setType(''); setBeds(''); setMaxPrice(''); setParams({}, { replace: true }); }}>Clear</Button>
+        {(listingType || selectedCityId || city || type || beds || maxPrice) && (
+          <Button variant="ghost" onClick={() => { setListingType(''); setCityId(''); setCity(''); setType(''); setBeds(''); setMaxPrice(''); setParams({}, { replace: true }); }}>Clear</Button>
         )}
       </div>
 

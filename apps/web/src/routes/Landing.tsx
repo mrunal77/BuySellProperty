@@ -4,11 +4,15 @@ import { SearchBar } from '../components/SearchBar';
 import { PropertyCard } from '../components/PropertyCard';
 import { SectionHeading, Button } from '../components/ui';
 
-const POPULAR = [
-  { name: 'Mumbai', note: 'Finance capital', grad: 'from-sky-600 to-indigo-800' },
-  { name: 'Pune', note: 'IT & education hub', grad: 'from-emerald-600 to-teal-800' },
-  { name: 'Bengaluru', note: 'Startup capital', grad: 'from-violet-600 to-purple-800' },
-  { name: 'Delhi NCR', note: 'Coming soon', grad: 'from-amber-500 to-orange-700' },
+const POPULAR_CITIES = [
+  { name: 'Delhi / NCR', count: '244,000+ Properties', image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Mumbai', count: '71,000+ Properties', image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Bangalore', count: '86,000+ Properties', image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Hyderabad', count: '41,000+ Properties', image: 'https://images.unsplash.com/photo-1605007493699-af65834f8a00?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Pune', count: '69,000+ Properties', image: 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Kolkata', count: '46,000+ Properties', image: 'https://images.unsplash.com/photo-1558431382-27e303142255?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Chennai', count: '46,000+ Properties', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Ahmedabad', count: '33,000+ Properties', image: 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80' },
 ];
 
 const STEPS = [
@@ -58,23 +62,49 @@ export function LandingPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.data.data.slice(0, 8).map((p: Parameters<typeof PropertyCard>[0]['p']) => <PropertyCard key={p.id} p={p} />)}
+            {featured.data?.data.slice(0, 8).map((p: Parameters<typeof PropertyCard>[0]['p']) => <PropertyCard key={p.id} p={p} />)}
           </div>
         )}
       </section>
 
-      {/* POPULAR LOCATIONS */}
-      <section className="border-y border-slate-200 bg-slate-50 py-12 dark:border-slate-800 dark:bg-slate-900/40">
+      {/* POPULAR CITIES */}
+      <section className="border-y border-slate-200 bg-slate-50/70 py-12 dark:border-slate-800 dark:bg-slate-900/40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <SectionHeading kicker="Explore" title="Popular locations" sub="High-demand neighbourhoods across India" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {POPULAR.map((l) => (
-              <Link key={l.name} to="/search" className={`group overflow-hidden rounded-xl bg-gradient-to-br ${l.grad} p-5 text-white transition hover:-translate-y-0.5 hover:shadow-lg`}>
-                <p className="text-xl font-extrabold">{l.name}</p>
-                <p className="text-sm text-white/80">{l.note}</p>
-                <p className="mt-4 text-sm font-semibold opacity-0 transition group-hover:opacity-100">Explore →</p>
-              </Link>
-            ))}
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl mb-6">
+            Explore Real Estate in Popular Indian Cities
+          </h2>
+          
+          <div className="relative overflow-x-auto pb-4 pt-1 scrollbar-none">
+            <div className="grid grid-rows-2 grid-flow-col auto-cols-[260px] sm:auto-cols-[290px] gap-4 min-w-max">
+              {POPULAR_CITIES.map((c) => {
+                const match = cities.find(ct => 
+                  ct.name.toLowerCase().includes(c.name.split('/')[0].trim().toLowerCase()) || 
+                  c.name.toLowerCase().includes(ct.name.toLowerCase())
+                );
+                const displayCount = match?.propertyCount != null ? `${match.propertyCount} Active Properties` : c.count;
+                return (
+                  <Link
+                    key={c.name}
+                    to={`/search?city=${encodeURIComponent(c.name.split('/')[0].trim())}`}
+                    className="flex items-center gap-3.5 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition hover:shadow-md hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <img
+                      src={c.image}
+                      alt={c.name}
+                      className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 rounded-xl object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
+                        {c.name}
+                      </h3>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                        {displayCount}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

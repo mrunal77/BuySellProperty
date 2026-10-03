@@ -26,6 +26,220 @@ namespace Infrastructure.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Amenities.Domain.Amenity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("amenities", "amenities");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a1111111-1111-1111-1111-111111111111"),
+                            Category = "Leisure",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Icon = "pool",
+                            Name = "Swimming Pool",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("a2222222-2222-2222-2222-222222222222"),
+                            Category = "Fitness",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Icon = "fitness_center",
+                            Name = "Gymnasium",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("a3333333-3333-3333-3333-333333333333"),
+                            Category = "Safety",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Icon = "security",
+                            Name = "24x7 Security",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("a4444444-4444-4444-4444-444444444444"),
+                            Category = "Utilities",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Icon = "bolt",
+                            Name = "Power Backup",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("a5555555-5555-5555-5555-555555555555"),
+                            Category = "Convenience",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Icon = "local_parking",
+                            Name = "Reserved Parking",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = new Guid("a6666666-6666-6666-6666-666666666666"),
+                            Category = "Community",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Icon = "meeting_room",
+                            Name = "Clubhouse",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        });
+                });
+
+            modelBuilder.Entity("Chat.Domain.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.ToTable("messages", "engagement");
+                });
+
+            modelBuilder.Entity("Chat.Domain.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Participant1Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Participant2Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Participant1Id");
+
+                    b.HasIndex("Participant2Id");
+
+                    b.ToTable("conversations", "engagement");
+                });
+
+            modelBuilder.Entity("Enquiries.Domain.Enquiry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BuyerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContactPhone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerId");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("enquiries", "engagement");
+                });
+
+            modelBuilder.Entity("Favorites.Domain.Favorite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "PropertyId")
+                        .IsUnique();
+
+                    b.ToTable("favorites", "engagement");
+                });
+
             modelBuilder.Entity("Identity.Domain.OtpCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -260,6 +474,11 @@ namespace Infrastructure.Migrations
                     b.Property<Guid?>("AgentId")
                         .HasColumnType("uuid");
 
+                    b.PrimitiveCollection<List<string>>("Amenities")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("amenities");
+
                     b.Property<double>("AreaSqft")
                         .HasColumnType("double precision");
 
@@ -287,6 +506,11 @@ namespace Infrastructure.Migrations
 
                     b.Property<int>("Furnishing")
                         .HasColumnType("integer");
+
+                    b.PrimitiveCollection<List<string>>("ImageUrls")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("image_urls");
 
                     b.Property<double>("Latitude")
                         .HasColumnType("double precision");
@@ -336,6 +560,47 @@ namespace Infrastructure.Migrations
                     b.HasIndex("CityId", "Status", "Price");
 
                     b.ToTable("properties", "properties");
+                });
+
+            modelBuilder.Entity("SiteVisits.Domain.SiteVisit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BuyerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ScheduledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuyerId");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("site_visits", "engagement");
                 });
 
             modelBuilder.Entity("Users.Domain.UserProfile", b =>

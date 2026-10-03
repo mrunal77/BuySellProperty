@@ -39,9 +39,10 @@ class AuthState {
   bool get isLoggedIn => accessToken != null;
   bool get isLister =>
       listerTypes.contains(userType) || roles.any(listerTypes.contains);
+  bool get isAgent => userType == 'Agent' || roles.contains('Agent');
   bool get isAdmin => userType == 'Admin' || roles.contains('Admin');
   /// Where to land right after login / registration.
-  String get homeRoute => isLister ? '/owner' : '/home';
+  String get homeRoute => isAgent ? '/agent' : (isLister ? '/owner' : '/home');
 }
 
 /// One-line diagnosis for logs: type + status + server code/message.
@@ -175,6 +176,17 @@ class AuthStore extends StateNotifier<AuthState> {
       await logout();
       return false;
     }
+  }
+
+  Future<void> setRole(String newUserType) async {
+    await _storage.write(key: 'userType', value: newUserType);
+    state = AuthState(
+      accessToken: state.accessToken,
+      refreshToken: state.refreshToken,
+      email: state.email,
+      userType: newUserType,
+      roles: state.roles,
+    );
   }
 
   Future<void> logout() async {

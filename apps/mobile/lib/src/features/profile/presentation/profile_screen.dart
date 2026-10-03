@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/auth_store.dart';
 import '../../../core/theme.dart';
+import '../../../core/browse_widgets.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -31,7 +32,14 @@ class _ProfileState extends ConsumerState<ProfileScreen> {
     final auth = ref.watch(authStoreProvider);
     final mode = ref.watch(themeModeProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/home'),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -40,6 +48,35 @@ class _ProfileState extends ConsumerState<ProfileScreen> {
               leading: CircleAvatar(child: Text((auth.email ?? 'G').substring(0, 1).toUpperCase())),
               title: Text(auth.email ?? 'Guest'),
               subtitle: Text('Type: ${auth.userType ?? '-'}${auth.roles.isNotEmpty ? ' • ${auth.roles.join(', ')}' : ''}'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Role Switcher Card for testing & multi-role users
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Switch Role / Experience', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: ['Customer', 'Owner', 'Agent', 'Builder'].map((role) {
+                      final isSelected = (auth.userType ?? 'Customer') == role;
+                      return ChoiceChip(
+                        label: Text(role),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            ref.read(authStoreProvider.notifier).setRole(role);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -66,14 +103,24 @@ class _ProfileState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          if (auth.isAgent || auth.userType == 'Agent') ...[
+            FilledButton.icon(
+              icon: const Icon(Icons.verified_user),
+              label: const Text('Agent Portal & Leads'),
+              style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700),
+              onPressed: () => context.push('/agent'),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (auth.isLister) ...[
-            const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => context.push('/owner'),
-              child: const Text('Owner dashboard'),
+              child: const Text('Owner Dashboard'),
             ),
+            const SizedBox(height: 8),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
           if (auth.isLoggedIn)
             FilledButton(
               onPressed: _loggingOut ? null : _logout,
@@ -85,6 +132,7 @@ class _ProfileState extends ConsumerState<ProfileScreen> {
             FilledButton(onPressed: () => context.push('/login'), child: const Text('Log in')),
         ],
       ),
+      bottomNavigationBar: const AppBottomNav(current: 3),
     );
   }
 }

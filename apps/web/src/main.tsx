@@ -13,6 +13,7 @@ import { LoginPage } from './routes/Login';
 import { RegisterPage } from './routes/Register';
 import { DashboardPage } from './routes/Dashboard';
 import { AdminPage } from './routes/Admin';
+import { FavoritesPage } from './routes/Favorites';
 import './index.css';
 
 initTheme();
@@ -57,6 +58,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="/p/:id" element={<DetailPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/favorites" element={<RequireAuth><FavoritesPage /></RequireAuth>} />
                 <Route path="/dashboard" element={<RequireLister><DashboardPage /></RequireLister>} />
                 <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminPage /></RequireAdmin></RequireAuth>} />
                 <Route path="*" element={<Navigate to="/" replace />} />

@@ -17,7 +17,7 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
     [HttpGet]
     [AllowAnonymous]
     public async Task<IResult> Search(
-        [FromQuery] Guid? cityId, [FromQuery] Guid? localityId,
+        [FromQuery] Guid? cityId, [FromQuery] string? city, [FromQuery] Guid? localityId,
         [FromQuery] PropertyType? type, [FromQuery] ListingType? listingType,
         [FromQuery] decimal? minPrice, [FromQuery] decimal? maxPrice,
         [FromQuery] int? beds, [FromQuery] int? baths,
@@ -44,6 +44,11 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         }
         if (ownerId is not null) q = q.Where(p => p.OwnerId == ownerId);
         if (cityId is not null) q = q.Where(p => p.CityId == cityId);
+        if (!string.IsNullOrWhiteSpace(city))
+        {
+            var normalizedCity = city.Trim().ToLower();
+            q = q.Where(p => db.Cities.Any(c => c.Id == p.CityId && c.Name.ToLower() == normalizedCity));
+        }
         if (localityId is not null) q = q.Where(p => p.LocalityId == localityId);
         if (type is not null) q = q.Where(p => p.PropertyType == type);
         if (listingType is not null) q = q.Where(p => p.ListingType == listingType);
@@ -72,7 +77,14 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
 
         var total = await q.LongCountAsync(ct);
         var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
-        return Results.Ok(new { data = items.Select(ToDto), page, pageSize, total });
+        
+        var ownerIds = items.Select(x => x.OwnerId).Distinct().ToList();
+        var ownersMap = await db.Users.AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        var dtos = items.Select(p => MapToDto(p, ownersMap.GetValueOrDefault(p.OwnerId)));
+        return Results.Ok(new { data = dtos, page, pageSize, total });
     }
 
     [HttpGet("{id:guid}")]
@@ -80,11 +92,13 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
     public async Task<IResult> Get(Guid id, CancellationToken ct)
     {
         var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
-        return p is null ? Errors.Problem("property.not_found", "Not found.", 404) : Results.Ok(ToDto(p));
+        if (p is null) return Errors.Problem("property.not_found", "Not found.", 404);
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
+        return Results.Ok(MapToDto(p, owner));
     }
 
     [HttpPost]
-    [Authorize(Roles = "Owner,Agent,Builder,Admin")]
+    [Authorize]
     public async Task<IResult> Create([FromBody] CreatePropertyRequest req, CancellationToken ct)
     {
         var v = new CreatePropertyValidator().Validate(req);
@@ -95,16 +109,18 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
 
         var created = Property.Create(req.Title, req.Description, req.PropertyType, req.ListingType,
             req.Price, req.AreaSqft, ownerId.Value, req.AddressLine, req.CityId,
-            req.Latitude, req.Longitude, req.Bedrooms, req.Bathrooms, req.Furnishing, req.LocalityId);
+            req.Latitude, req.Longitude, req.Bedrooms, req.Bathrooms, req.Furnishing, req.LocalityId,
+            floor: null, totalFloors: null, facing: null, imageUrls: req.ImageUrls, amenities: req.Amenities);
         if (created.IsFailure) return Errors.Problem(created.Error!.Code, created.Error.Message, 400);
 
         db.Properties.Add(created.Value!);
         await db.SaveChangesAsync(ct);
-        return Results.Created($"/api/v1/properties/{created.Value!.Id}", ToDto(created.Value));
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == ownerId, ct);
+        return Results.Created($"/api/v1/properties/{created.Value!.Id}", MapToDto(created.Value!, owner));
     }
 
     [HttpPost("{id:guid}/publish")]
-    [Authorize(Roles = "Owner,Agent,Builder,Admin")]
+    [Authorize]
     public async Task<IResult> Publish(Guid id, CancellationToken ct)
     {
         var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -113,23 +129,67 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         var r = p.Publish();
         if (r.IsFailure) return Errors.Problem(r.Error!.Code, r.Error.Message, 409);
         await db.SaveChangesAsync(ct);
-        return Results.Ok(ToDto(p));
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
+        return Results.Ok(MapToDto(p, owner));
+    }
+
+    [HttpPost("{id:guid}/mark-sold")]
+    [Authorize]
+    public async Task<IResult> MarkSold(Guid id, CancellationToken ct)
+    {
+        var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (p is null) return Errors.Problem("property.not_found", "Not found.", 404);
+        if (!CanEdit(p)) return Errors.Problem("auth.forbidden", "Not your listing.", 403);
+        var r = p.MarkSold();
+        if (r.IsFailure) return Errors.Problem(r.Error!.Code, r.Error.Message, 409);
+        await db.SaveChangesAsync(ct);
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
+        return Results.Ok(MapToDto(p, owner));
+    }
+
+    [HttpPost("{id:guid}/mark-rented")]
+    [Authorize]
+    public async Task<IResult> MarkRented(Guid id, CancellationToken ct)
+    {
+        var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (p is null) return Errors.Problem("property.not_found", "Not found.", 404);
+        if (!CanEdit(p)) return Errors.Problem("auth.forbidden", "Not your listing.", 403);
+        var r = p.MarkRented();
+        if (r.IsFailure) return Errors.Problem(r.Error!.Code, r.Error.Message, 409);
+        await db.SaveChangesAsync(ct);
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
+        return Results.Ok(MapToDto(p, owner));
+    }
+
+    [HttpPost("{id:guid}/pause")]
+    [Authorize]
+    public async Task<IResult> Pause(Guid id, CancellationToken ct)
+    {
+        var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (p is null) return Errors.Problem("property.not_found", "Not found.", 404);
+        if (!CanEdit(p)) return Errors.Problem("auth.forbidden", "Not your listing.", 403);
+        var r = p.Pause();
+        if (r.IsFailure) return Errors.Problem(r.Error!.Code, r.Error.Message, 409);
+        await db.SaveChangesAsync(ct);
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
+        return Results.Ok(MapToDto(p, owner));
     }
 
     [HttpPatch("{id:guid}")]
-    [Authorize(Roles = "Owner,Agent,Builder,Admin")]
+    [Authorize]
     public async Task<IResult> Update(Guid id, [FromBody] CreatePropertyRequest req, CancellationToken ct)
     {
         var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return Errors.Problem("property.not_found", "Not found.", 404);
         if (!CanEdit(p)) return Errors.Problem("auth.forbidden", "Not your listing.", 403);
-        p.Update(req.Title, req.Description, req.Price, req.AreaSqft, req.Bedrooms, req.Bathrooms, req.Furnishing, req.AddressLine);
+        p.Update(req.Title, req.Description, req.Price, req.AreaSqft, req.Bedrooms, req.Bathrooms, req.Furnishing, req.AddressLine, req.ImageUrls, req.Amenities);
         await db.SaveChangesAsync(ct);
-        return Results.Ok(ToDto(p));
+        var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
+        return Results.Ok(MapToDto(p, owner));
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Owner,Agent,Builder,Admin")]
+    [Authorize]
     public async Task<IResult> Delete(Guid id, CancellationToken ct)
     {
         var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -155,12 +215,20 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
 
     private static double ToRad(double d) => d * Math.PI / 180.0;
 
-    private static object ToDto(Property p) => new
+    private static object MapToDto(Property p, Identity.Domain.User? owner)
     {
-        p.Id, p.Title, p.Description, propertyType = p.PropertyType.ToString(),
-        listingType = p.ListingType.ToString(), p.Price, p.AreaSqft,
-        p.Bedrooms, p.Bathrooms, furnishing = p.Furnishing.ToString(),
-        status = p.Status.ToString(), p.OwnerId, p.AddressLine, p.CityId, p.LocalityId,
-        p.Latitude, p.Longitude, p.CreatedAt, p.PublishedAt,
-    };
+        var ownerPhone = !string.IsNullOrWhiteSpace(owner?.Phone) ? owner.Phone : "+91 9876543210";
+        var ownerEmail = owner?.Email ?? "owner@buysellproperty.com";
+
+        return new
+        {
+            p.Id, p.Title, p.Description, propertyType = p.PropertyType.ToString(),
+            listingType = p.ListingType.ToString(), p.Price, p.AreaSqft,
+            p.Bedrooms, p.Bathrooms, furnishing = p.Furnishing.ToString(),
+            status = p.Status.ToString(), p.OwnerId, p.AddressLine, p.CityId, p.LocalityId,
+            p.Latitude, p.Longitude, imageUrls = p.ImageUrls, amenities = p.Amenities,
+            ownerPhone, ownerEmail,
+            p.CreatedAt, p.PublishedAt,
+        };
+    }
 }

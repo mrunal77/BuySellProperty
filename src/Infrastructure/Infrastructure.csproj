@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -20,6 +20,11 @@
     <ProjectReference Include="..\Modules\Users\Users.csproj" />
     <ProjectReference Include="..\Modules\Properties\Properties.csproj" />
     <ProjectReference Include="..\Modules\Locations\Locations.csproj" />
+    <ProjectReference Include="..\Modules\Favorites\Favorites.csproj" />
+    <ProjectReference Include="..\Modules\Enquiries\Enquiries.csproj" />
+    <ProjectReference Include="..\Modules\SiteVisits\SiteVisits.csproj" />
+    <ProjectReference Include="..\Modules\Chat\Chat.csproj" />
+    <ProjectReference Include="..\Modules\Amenities\Amenities.csproj" />
   </ItemGroup>
 
 </Project>

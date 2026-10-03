@@ -10,7 +10,8 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres");
 
@@ -57,17 +58,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // Web (Vite dev on :3000, prod web origin) calls the API cross-origin.
-var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? ["http://localhost:3000"];
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
-    .WithOrigins(corsOrigins)
+    .SetIsOriginAllowed(_ => true)
     .AllowAnyHeader()
-    .AllowAnyMethod()));
+    .AllowAnyMethod()
+    .AllowCredentials()));
 
 var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseCors();
+var uploadsDir = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+Directory.CreateDirectory(uploadsDir);
+app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsDir),
+    RequestPath = "/uploads"
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -92,6 +100,7 @@ if (app.Configuration.GetValue("Seed:Enabled", true) && !app.Environment.IsEnvir
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
+        await DbSeeder.SeedAsync(db);
     }
     catch (Exception ex)
     {

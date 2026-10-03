@@ -6,8 +6,20 @@ import 'logger.dart';
 
 const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:5000',
+  defaultValue: 'http://localhost:5000',
 );
+
+String normalizeImageUrl(String? url) {
+  if (url == null || url.trim().isEmpty) return '';
+  final trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/')) {
+    return '$apiBaseUrl$trimmed';
+  }
+  return '$apiBaseUrl/$trimmed';
+}
 
 final dioProvider = Provider<Dio>((ref) {
   AppLog.info('API base URL: $apiBaseUrl');

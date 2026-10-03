@@ -5,14 +5,89 @@ import '../../search/data/properties_api.dart';
 import '../../../core/auth_store.dart';
 import '../../../core/browse_widgets.dart';
 
-const _locations = [
-  ('Mumbai', 'Finance capital', [Color(0xFF0369A1), Color(0xFF312E81)]),
-  ('Pune', 'IT & education hub', [Color(0xFF006244), Color(0xFF014434)]),
-  ('Bengaluru', 'Startup capital', [Color(0xFF7C3AED), Color(0xFF4C1D95)]),
+class _CityItem {
+  final String name, count, image;
+  const _CityItem(this.name, this.count, this.image);
+}
+
+const _popularCities = [
+  _CityItem('Delhi / NCR', '244,000+ Properties', 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Mumbai', '71,000+ Properties', 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Bangalore', '86,000+ Properties', 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Hyderabad', '41,000+ Properties', 'https://images.unsplash.com/photo-1605007493699-af65834f8a00?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Pune', '69,000+ Properties', 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Kolkata', '46,000+ Properties', 'https://images.unsplash.com/photo-1558431382-27e303142255?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Chennai', '46,000+ Properties', 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Ahmedabad', '33,000+ Properties', 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80'),
 ];
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+
+  Widget _buildCityCard(BuildContext context, _CityItem c) {
+    return InkWell(
+      onTap: () => context.go('/search'),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 250,
+        height: 80,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                c.image,
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 64,
+                  height: 64,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.location_city, color: Colors.grey),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    c.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    c.count,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,37 +165,33 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const SectionTitle(title: 'Popular locations'),
-            const SizedBox(height: 8),
-            GridView.count(
-              crossAxisCount: wide ? 3 : 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.6,
-              children: [
-                for (final (name, note, colors) in _locations)
-                  InkWell(
-                    onTap: () => context.go('/search'),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: colors),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(note, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+            const Text(
+              'Explore Real Estate in Popular Indian Cities',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 175,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: (_popularCities.length / 2).ceil(),
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, colIndex) {
+                  final item1 = _popularCities[colIndex * 2];
+                  final item2 = colIndex * 2 + 1 < _popularCities.length
+                      ? _popularCities[colIndex * 2 + 1]
+                      : null;
+                  return Column(
+                    children: [
+                      _buildCityCard(context, item1),
+                      if (item2 != null) ...[
+                        const SizedBox(height: 10),
+                        _buildCityCard(context, item2),
+                      ],
+                    ],
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 20),
             // POST CTA
