@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../search/data/properties_api.dart';
 import '../../../core/browse_widgets.dart';
+import '../../../core/validators.dart';
 
 class AgentDashboardScreen extends ConsumerStatefulWidget {
   const AgentDashboardScreen({super.key});
@@ -209,89 +210,156 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen>
   }
 
   Widget _buildLeadsTab() {
-    final mockLeads = [
-      {'name': 'Rajesh Sharma', 'phone': '+91 98765 43210', 'property': ' Luxury 3 BHK Villa in Whitefield', 'status': 'New Lead', 'time': '10 mins ago'},
-      {'name': 'Priya Nair', 'phone': '+91 98123 45678', 'property': '2 BHK Apartment in Koramangala', 'status': 'Contacted', 'time': '2 hours ago'},
-      {'name': 'Amit Kumar', 'phone': '+91 97654 32109', 'property': 'Commercial Office Space in HSR', 'status': 'Visit Scheduled', 'time': 'Yesterday'},
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: mockLeads.length,
-      itemBuilder: (ctx, i) {
-        final lead = mockLeads[i];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          child: Padding(
+    final enquiries = ref.watch(myEnquiriesProvider(true));
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(myEnquiriesProvider(true)),
+      child: enquiries.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => BrowseError(error: e, onRetry: () => ref.invalidate(myEnquiriesProvider(true))),
+        data: (list) {
+          if (list.isEmpty) {
+            return ListView(children: const [
+              SizedBox(height: 60),
+              Center(child: Text('No leads yet. Enquiries on your listings appear here.')),
+            ]);
+          }
+          return ListView.builder(
             padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(lead['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(10),
+            itemCount: list.length,
+            itemBuilder: (ctx, i) {
+              final e = list[i];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(e.propertyTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _enquiryColor(e.status).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(e.status, style: TextStyle(fontSize: 10, color: _enquiryColor(e.status), fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        lead['status']!,
-                        style: TextStyle(fontSize: 10, color: Colors.blue.shade900, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 6),
+                      Text(e.message, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.phone, size: 14, color: Colors.green.shade700),
+                          const SizedBox(width: 4),
+                          Text(e.contactPhone, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                          const Spacer(),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_horiz, size: 18),
+                            onSelected: (newStatus) async {
+                              try {
+                                await updateEnquiryStatus(ref, e.id, newStatus);
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Lead marked as $newStatus.')));
+                                }
+                              } catch (err) {
+                                if (ctx.mounted) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiErrorMessage(err, 'Update failed.'))));
+                                }
+                              }
+                            },
+                            itemBuilder: (_) => ['Contacted', 'Visited', 'Closed', 'Spam']
+                                .map((s) => PopupMenuItem(value: s, child: Text('Mark $s')))
+                                .toList(),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(lead['property']!, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.phone, size: 14, color: Colors.green.shade700),
-                    const SizedBox(width: 4),
-                    Text(lead['phone']!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    Text(lead['time']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
+
+  static Color _enquiryColor(String status) => switch (status) {
+    'New' => Colors.blue,
+    'Contacted' => Colors.orange,
+    'Visited' => Colors.green,
+    'Closed' => Colors.grey,
+    'Spam' => Colors.red,
+    _ => Colors.blue,
+  };
 
   Widget _buildVisitsTab() {
-    final mockVisits = [
-      {'client': 'Sunil Verma', 'time': 'Today, 4:00 PM', 'property': '3 BHK Apartment in Indiranagar', 'status': 'Confirmed'},
-      {'client': 'Anita Roy', 'time': 'Tomorrow, 11:30 AM', 'property': 'Plot in Devanahalli', 'status': 'Pending'},
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: mockVisits.length,
-      itemBuilder: (ctx, i) {
-        final visit = mockVisits[i];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue.shade100,
-              child: Icon(Icons.event_available, color: Colors.blue.shade900),
-            ),
-            title: Text(visit['client']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${visit['property']}\nTime: ${visit['time']}'),
-            isThreeLine: true,
-            trailing: Chip(
-              label: Text(visit['status']!, style: const TextStyle(fontSize: 10)),
-              backgroundColor: visit['status'] == 'Confirmed' ? Colors.green.shade100 : Colors.orange.shade100,
-            ),
-          ),
-        );
-      },
+    final visits = ref.watch(mySiteVisitsProvider(true));
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(mySiteVisitsProvider(true)),
+      child: visits.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => BrowseError(error: e, onRetry: () => ref.invalidate(mySiteVisitsProvider(true))),
+        data: (list) {
+          if (list.isEmpty) {
+            return ListView(children: const [
+              SizedBox(height: 60),
+              Center(child: Text('No site visits yet. Scheduled visits appear here.')),
+            ]);
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: list.length,
+            itemBuilder: (ctx, i) {
+              final v = list[i];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _visitColor(v.status).withValues(alpha: 0.15),
+                    child: Icon(Icons.event_available, color: _visitColor(v.status)),
+                  ),
+                  title: Text(v.propertyTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: Text('Scheduled: ${v.scheduledAt}\n${v.notes ?? ''}'),
+                  isThreeLine: true,
+                  trailing: PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz, size: 18),
+                    onSelected: (newStatus) async {
+                      try {
+                        await updateSiteVisitStatus(ref, v.id, newStatus);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Visit marked as $newStatus.')));
+                        }
+                      } catch (err) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiErrorMessage(err, 'Update failed.'))));
+                        }
+                      }
+                    },
+                    itemBuilder: (_) => ['Confirmed', 'Completed', 'Cancelled', 'NoShow']
+                        .map((s) => PopupMenuItem(value: s, child: Text('Mark $s')))
+                        .toList(),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
+
+  static Color _visitColor(String status) => switch (status) {
+    'Requested' => Colors.orange,
+    'Confirmed' => Colors.green,
+    'Completed' => Colors.blue,
+    'Cancelled' => Colors.red,
+    'NoShow' => Colors.red,
+    _ => Colors.grey,
+  };
 }

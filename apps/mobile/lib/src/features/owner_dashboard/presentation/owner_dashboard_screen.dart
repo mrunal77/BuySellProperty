@@ -10,6 +10,95 @@ import '../../../core/network.dart';
 class OwnerDashboardScreen extends ConsumerWidget {
   const OwnerDashboardScreen({super.key});
 
+  static Future<bool> _confirmAction(
+    BuildContext context, String action, String propertyTitle,
+  ) async {
+    String title, message, confirmLabel;
+    switch (action) {
+      case 'delete':
+        title = 'Delete Listing';
+        message = 'Are you sure you want to delete "$propertyTitle"? This cannot be undone.';
+        confirmLabel = 'Delete';
+        break;
+      case 'sold':
+        title = 'Mark as Sold';
+        message = 'Mark "$propertyTitle" as sold? This will hide it from public search.';
+        confirmLabel = 'Mark Sold';
+        break;
+      case 'rented':
+        title = 'Mark as Rented';
+        message = 'Mark "$propertyTitle" as rented? This will hide it from public search.';
+        confirmLabel = 'Mark Rented';
+        break;
+      case 'pause':
+        title = 'Pause Listing';
+        message = 'Pause "$propertyTitle"? It will be hidden from public search until republished.';
+        confirmLabel = 'Pause';
+        break;
+      case 'publish':
+        title = 'Publish Listing';
+        message = 'Publish "$propertyTitle"? It will be visible to buyers.';
+        confirmLabel = 'Publish';
+        break;
+      default:
+        return true;
+    }
+    final result = await showGeneralDialog<bool?>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: title,
+      transitionDuration: const Duration(milliseconds: 250),
+      pageBuilder: (_, __, ___) => Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Material(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: Theme.of(context).dialogTheme.titleTextStyle),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    style: Theme.of(context).dialogTheme.contentTextStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: Text(confirmLabel),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      transitionBuilder: (_, anim, __, child) => ScaleTransition(
+        scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+        child: child,
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final props = ref.watch(propertySearchProvider(const PropertyQuery(mine: true, pageSize: 50)));
@@ -110,8 +199,10 @@ class OwnerDashboardScreen extends ConsumerWidget {
                       ],
                     ),
                     trailing: PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
+icon: const Icon(Icons.more_vert),
                       onSelected: (action) async {
+                        final confirmed = await _confirmAction(ctx, action, p['title'] ?? '');
+                        if (!confirmed) return;
                         try {
                           if (action == 'publish') {
                             await publishProperty(ref, propId);
@@ -123,6 +214,9 @@ class OwnerDashboardScreen extends ConsumerWidget {
                             await pauseProperty(ref, propId);
                           } else if (action == 'delete') {
                             await deleteProperty(ref, propId);
+                          } else if (action == 'edit') {
+                            context.push('/owner/edit/$propId');
+                            return;
                           }
                           ref.invalidate(propertySearchProvider);
                           if (ctx.mounted) {
@@ -146,6 +240,7 @@ class OwnerDashboardScreen extends ConsumerWidget {
                           const PopupMenuItem(value: 'rented', child: Row(children: [Icon(Icons.key, color: Colors.blue, size: 18), SizedBox(width: 8), Text('Mark as Rented')])),
                           const PopupMenuItem(value: 'pause', child: Row(children: [Icon(Icons.pause_circle_outline, color: Colors.grey, size: 18), SizedBox(width: 8), Text('Pause Listing')])),
                         ],
+                        const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, color: Colors.blue, size: 18), SizedBox(width: 8), Text('Edit Listing')])),
                         const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, color: Colors.red, size: 18), SizedBox(width: 8), Text('Delete Listing')])),
                       ],
                     ),

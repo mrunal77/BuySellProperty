@@ -110,7 +110,8 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         var created = Property.Create(req.Title, req.Description, req.PropertyType, req.ListingType,
             req.Price, req.AreaSqft, ownerId.Value, req.AddressLine, req.CityId,
             req.Latitude, req.Longitude, req.Bedrooms, req.Bathrooms, req.Furnishing, req.LocalityId,
-            floor: null, totalFloors: null, facing: null, imageUrls: req.ImageUrls, amenities: req.Amenities);
+            floor: null, totalFloors: null, facing: null, imageUrls: req.ImageUrls, amenities: req.Amenities,
+            details: req.Details, contactName: req.ContactName, contactPhone: req.ContactPhone, whatsApp: req.WhatsApp);
         if (created.IsFailure) return Errors.Problem(created.Error!.Code, created.Error.Message, 400);
 
         db.Properties.Add(created.Value!);
@@ -182,7 +183,7 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         var p = await db.Properties.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return Errors.Problem("property.not_found", "Not found.", 404);
         if (!CanEdit(p)) return Errors.Problem("auth.forbidden", "Not your listing.", 403);
-        p.Update(req.Title, req.Description, req.Price, req.AreaSqft, req.Bedrooms, req.Bathrooms, req.Furnishing, req.AddressLine, req.ImageUrls, req.Amenities);
+        p.Update(req.Title, req.Description, req.Price, req.AreaSqft, req.Bedrooms, req.Bathrooms, req.Furnishing, req.AddressLine, req.ImageUrls, req.Amenities, req.Details, req.ContactName, req.ContactPhone, req.WhatsApp);
         await db.SaveChangesAsync(ct);
         var owner = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == p.OwnerId, ct);
         return Results.Ok(MapToDto(p, owner));
@@ -227,6 +228,7 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
             p.Bedrooms, p.Bathrooms, furnishing = p.Furnishing.ToString(),
             status = p.Status.ToString(), p.OwnerId, p.AddressLine, p.CityId, p.LocalityId,
             p.Latitude, p.Longitude, imageUrls = p.ImageUrls, amenities = p.Amenities,
+            details = p.Details, contactName = p.ContactName, contactPhone = p.ContactPhone, whatsApp = p.WhatsApp,
             ownerPhone, ownerEmail,
             p.CreatedAt, p.PublishedAt,
         };

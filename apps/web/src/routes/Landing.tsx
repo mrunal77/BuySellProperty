@@ -5,14 +5,14 @@ import { PropertyCard } from '../components/PropertyCard';
 import { SectionHeading, Button } from '../components/ui';
 
 const POPULAR_CITIES = [
-  { name: 'Delhi / NCR', count: '244,000+ Properties', image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Mumbai', count: '71,000+ Properties', image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Bangalore', count: '86,000+ Properties', image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Hyderabad', count: '41,000+ Properties', image: 'https://images.unsplash.com/photo-1605007493699-af65834f8a00?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Pune', count: '69,000+ Properties', image: 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Kolkata', count: '46,000+ Properties', image: 'https://images.unsplash.com/photo-1558431382-27e303142255?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Chennai', count: '46,000+ Properties', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&auto=format&fit=crop&q=80' },
-  { name: 'Ahmedabad', count: '33,000+ Properties', image: 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Delhi / NCR', image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Mumbai', image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Bangalore', image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Hyderabad', image: 'https://images.unsplash.com/photo-1605007493699-af65834f8a00?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Pune', image: 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Kolkata', image: 'https://images.unsplash.com/photo-1558431382-27e303142255?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Chennai', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&auto=format&fit=crop&q=80' },
+  { name: 'Ahmedabad', image: 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80' },
 ];
 
 const STEPS = [
@@ -81,7 +81,7 @@ export function LandingPage() {
                   ct.name.toLowerCase().includes(c.name.split('/')[0].trim().toLowerCase()) || 
                   c.name.toLowerCase().includes(ct.name.toLowerCase())
                 );
-                const displayCount = match?.propertyCount != null ? `${match.propertyCount} Active Properties` : c.count;
+                const displayCount = `${match?.propertyCount ?? 0} ${match?.propertyCount === 1 ? 'Active Property' : 'Active Properties'}`;
                 return (
                   <Link
                     key={c.name}

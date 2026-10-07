@@ -5,11 +5,13 @@ import '../../../core/network.dart';
 class PropertyDto {
   final String id, title, propertyType, listingType, status;
   final String? description, addressLine, cityId, furnishing, ownerPhone, ownerEmail;
+  final String? ownerId, localityId, contactName, contactPhone, whatsApp;
   final double price, areaSqft;
   final double? latitude, longitude;
   final int? bedrooms, bathrooms;
   final List<String> imageUrls;
   final List<String> amenities;
+  final Map<String, dynamic>? details;
 
   PropertyDto.fromJson(Map<String, dynamic> j)
       : id = j['id'].toString(),
@@ -17,9 +19,15 @@ class PropertyDto {
         description = j['description'],
         addressLine = j['addressLine'],
         cityId = j['cityId']?.toString(),
+        localityId = j['localityId']?.toString(),
         furnishing = j['furnishing'],
         ownerPhone = j['ownerPhone']?.toString() ?? '+91 9876543210',
         ownerEmail = j['ownerEmail']?.toString() ?? 'owner@buysellproperty.com',
+        ownerId = j['ownerId']?.toString(),
+        contactName = j['contactName']?.toString(),
+        contactPhone = j['contactPhone']?.toString(),
+        whatsApp = j['whatsApp']?.toString(),
+        details = j['details'] is Map ? Map<String, dynamic>.from(j['details'] as Map) : null,
         propertyType = j['propertyType'] ?? '',
         listingType = j['listingType'] ?? '',
         status = j['status'] ?? '',
@@ -71,6 +79,26 @@ class SiteVisitDto {
         status = j['status'] ?? '',
         notes = j['notes'],
         createdAt = j['createdAt'] ?? '';
+}
+
+class CityDto {
+  final String id, name, state;
+  final int propertyCount;
+  final double? latitude, longitude;
+  CityDto.fromJson(Map<String, dynamic> j)
+      : id = j['id'].toString(),
+        name = j['name'] ?? '',
+        state = j['state'] ?? '',
+        latitude = j['latitude'] != null ? (j['latitude'] as num).toDouble() : null,
+        longitude = j['longitude'] != null ? (j['longitude'] as num).toDouble() : null,
+        propertyCount = (j['propertyCount'] as num?)?.toInt() ?? 0;
+}
+
+class LocalityDto {
+  final String id, name;
+  LocalityDto.fromJson(Map<String, dynamic> j)
+      : id = j['id'].toString(),
+        name = j['name'] ?? '';
 }
 
 /// Value-type search query (stable ==/hashCode so Riverpod caches correctly).
@@ -128,6 +156,18 @@ final favoritesProvider = FutureProvider<List<PropertyDto>>((ref) async {
   return (res.data as List).map((j) => PropertyDto.fromJson(j)).toList();
 });
 
+final citiesProvider = FutureProvider<List<CityDto>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/api/v1/cities');
+  return (res.data as List).map((j) => CityDto.fromJson(j)).toList();
+});
+
+final localitiesProvider = FutureProvider.family<List<LocalityDto>, String>((ref, cityId) async {
+  final dio = ref.watch(dioProvider);
+  final res = await dio.get('/api/v1/localities', queryParameters: {'cityId': cityId});
+  return (res.data as List).map((j) => LocalityDto.fromJson(j)).toList();
+});
+
 final masterAmenitiesProvider = FutureProvider<List<AmenityDto>>((ref) async {
   final dio = ref.watch(dioProvider);
   final res = await dio.get('/api/v1/amenities');
@@ -180,6 +220,11 @@ Future<void> createProperty(WidgetRef ref, Map<String, dynamic> body) async {
   await ref.read(dioProvider).post('/api/v1/properties', data: body);
 }
 
+Future<void> updateProperty(WidgetRef ref, String id, Map<String, dynamic> body) async {
+  await ref.read(dioProvider).patch('/api/v1/properties/$id', data: body);
+  ref.invalidate(propertyDetailProvider(id));
+}
+
 Future<void> createEnquiry(WidgetRef ref, String propertyId, String message, String phone) async {
   await ref.read(dioProvider).post('/api/v1/enquiries', data: {
     'propertyId': propertyId,
@@ -213,4 +258,16 @@ Future<String> uploadImage(WidgetRef ref, String filePath) async {
   });
   final res = await dio.post('/api/v1/media/upload', data: formData);
   return (res.data as Map<String, dynamic>)['url'] as String;
+}
+
+Future<void> updateEnquiryStatus(WidgetRef ref, String id, String status) async {
+  await ref.read(dioProvider).patch('/api/v1/enquiries/$id', data: {'status': status});
+  ref.invalidate(myEnquiriesProvider(true));
+  ref.invalidate(myEnquiriesProvider(false));
+}
+
+Future<void> updateSiteVisitStatus(WidgetRef ref, String id, String status) async {
+  await ref.read(dioProvider).patch('/api/v1/site-visits/$id', data: {'status': status});
+  ref.invalidate(mySiteVisitsProvider(true));
+  ref.invalidate(mySiteVisitsProvider(false));
 }

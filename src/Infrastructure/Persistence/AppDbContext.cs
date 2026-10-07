@@ -89,6 +89,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.Title).IsRequired().HasMaxLength(200);
             e.Property(x => x.ImageUrls).HasColumnName("image_urls").HasColumnType("text[]");
             e.Property(x => x.Amenities).HasColumnName("amenities").HasColumnType("text[]");
+            e.Property(x => x.Details).HasColumnName("details").HasColumnType("jsonb");
+            e.Property(x => x.ContactName).HasColumnName("contact_name").HasMaxLength(120);
+            e.Property(x => x.ContactPhone).HasColumnName("contact_phone").HasMaxLength(30);
+            e.Property(x => x.WhatsApp).HasColumnName("whatsapp").HasMaxLength(30);
             e.HasIndex(x => new { x.CityId, x.Status, x.Price });
             e.HasIndex(x => x.Status);
         });

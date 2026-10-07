@@ -6,25 +6,34 @@ import '../../../core/auth_store.dart';
 import '../../../core/browse_widgets.dart';
 
 class _CityItem {
-  final String name, count, image;
-  const _CityItem(this.name, this.count, this.image);
+  final String name, image;
+  const _CityItem(this.name, this.image);
 }
 
 const _popularCities = [
-  _CityItem('Delhi / NCR', '244,000+ Properties', 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Mumbai', '71,000+ Properties', 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Bangalore', '86,000+ Properties', 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Hyderabad', '41,000+ Properties', 'https://images.unsplash.com/photo-1605007493699-af65834f8a00?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Pune', '69,000+ Properties', 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Kolkata', '46,000+ Properties', 'https://images.unsplash.com/photo-1558431382-27e303142255?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Chennai', '46,000+ Properties', 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&auto=format&fit=crop&q=80'),
-  _CityItem('Ahmedabad', '33,000+ Properties', 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Delhi / NCR', 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Mumbai', 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Bangalore', 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Hyderabad', 'https://images.unsplash.com/photo-1605007493699-af65834f8a00?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Pune', 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Kolkata', 'https://images.unsplash.com/photo-1558431382-27e303142255?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Chennai', 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=500&auto=format&fit=crop&q=80'),
+  _CityItem('Ahmedabad', 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80'),
 ];
+
+int _matchCityCount(List<CityDto> cities, String popularName) {
+  final key = popularName.split('/').first.trim().toLowerCase();
+  for (final c in cities) {
+    final n = c.name.toLowerCase();
+    if (n == key || n.startsWith(key) || key.startsWith(n)) return c.propertyCount;
+  }
+  return 0;
+}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  Widget _buildCityCard(BuildContext context, _CityItem c) {
+  Widget _buildCityCard(BuildContext context, _CityItem c, int count) {
     return InkWell(
       onTap: () => context.go('/search'),
       borderRadius: BorderRadius.circular(16),
@@ -75,7 +84,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    c.count,
+                    '$count ${count == 1 ? 'Property' : 'Properties'}',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -93,6 +102,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authStoreProvider);
     final featured = ref.watch(propertySearchProvider(const PropertyQuery(pageSize: 8)));
+    final cities = ref.watch(citiesProvider).valueOrNull ?? const [];
     final cs = Theme.of(context).colorScheme;
     final wide = MediaQuery.sizeOf(context).width > 700;
 
@@ -183,10 +193,10 @@ class HomeScreen extends ConsumerWidget {
                       : null;
                   return Column(
                     children: [
-                      _buildCityCard(context, item1),
+                      _buildCityCard(context, item1, _matchCityCount(cities, item1.name)),
                       if (item2 != null) ...[
                         const SizedBox(height: 10),
-                        _buildCityCard(context, item2),
+                        _buildCityCard(context, item2, _matchCityCount(cities, item2.name)),
                       ],
                     ],
                   );

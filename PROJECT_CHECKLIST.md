@@ -51,4 +51,6 @@
 - [x] (2026-10-02) Dynamic real estate property count API (`GET /api/v1/cities`) & `city` string filter matching (`GET /api/v1/properties?city=...`)
 - [x] (2026-10-02) City filter matching & dynamic property counts on Web and Mobile apps
 - [x] (2026-10-02) Mobile Agent workflow (Agent Role switcher, Agent Dashboard at `/agent`, Client Listings, Lead Inbox, Site Visit Calendar, Verified Agent RERA Badge)
+- [x] (2026-10-07) Backend: `details` JSONB column + contact fields (`contactName/contactPhone/whatsApp`) on Properties; new enums `Warehouse/Industrial/Farmhouse`; migration `AddPropertyDetails`; all 39 tests passing
+- [x] (2026-10-07) Mobile: 7-step dynamic property listing wizard (Sell/Rent → 10 property types, config-driven per-type fields + dynamic validation, city/locality dropdowns, photos, contact, live preview, submit-for-approval); `PropertyDto.details`; localities API client; `flutter analyze` clean + 6/6 Flutter tests passing
 

@@ -34,8 +34,9 @@ class AuthState {
   final String? refreshToken;
   final String? email;
   final String? userType;
+  final String? userId;
   final List<String> roles;
-  const AuthState({this.accessToken, this.refreshToken, this.email, this.userType, this.roles = const []});
+  const AuthState({this.accessToken, this.refreshToken, this.email, this.userType, this.userId, this.roles = const []});
   bool get isLoggedIn => accessToken != null;
   bool get isLister =>
       listerTypes.contains(userType) || roles.any(listerTypes.contains);
@@ -72,12 +73,13 @@ class AuthStore extends StateNotifier<AuthState> {
     final refresh = await _storage.read(key: 'refresh');
     final email = await _storage.read(key: 'email');
     final userType = await _storage.read(key: 'userType');
+    final userId = await _storage.read(key: 'userId');
     final rolesRaw = await _storage.read(key: 'roles');
     List<String> roles = const [];
     if (rolesRaw != null && rolesRaw.isNotEmpty) {
       roles = rolesRaw.split(',').where((r) => r.isNotEmpty).toList();
     }
-    state = AuthState(accessToken: access, refreshToken: refresh, email: email, userType: userType, roles: roles);
+    state = AuthState(accessToken: access, refreshToken: refresh, email: email, userType: userType, userId: userId, roles: roles);
   }
 
   Future<String?> get accessToken async => state.accessToken ?? await _storage.read(key: 'access');
@@ -151,16 +153,19 @@ class AuthStore extends StateNotifier<AuthState> {
 
   Future<void> _save(Map<String, dynamic> json) async {
     final roles = List<String>.from(json['roles'] ?? []);
+    final userId = json['userId']?.toString();
     await _storage.write(key: 'access', value: json['accessToken'] as String);
     await _storage.write(key: 'refresh', value: json['refreshToken'] as String);
     await _storage.write(key: 'email', value: json['email'] as String);
     await _storage.write(key: 'userType', value: json['userType'] as String);
+    if (userId != null) await _storage.write(key: 'userId', value: userId);
     await _storage.write(key: 'roles', value: roles.join(','));
     state = AuthState(
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
       email: json['email'] as String,
       userType: json['userType'] as String,
+      userId: userId,
       roles: roles,
     );
   }

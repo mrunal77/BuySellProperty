@@ -42,7 +42,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, s) => SearchScreen(
           initialListingType: s.uri.queryParameters['listingType'],
           initialType: s.uri.queryParameters['type'],
-          initialCity: s.uri.queryParameters['city'],
         ),
       ),
       GoRoute(path: '/p/:id', builder: (_, s) => PropertyDetailScreen(id: s.pathParameters['id']!)),
@@ -50,6 +49,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/owner', builder: (_, __) => const OwnerDashboardScreen()),
       GoRoute(path: '/agent', builder: (_, __) => const AgentDashboardScreen()),
       GoRoute(path: '/owner/new', builder: (_, __) => const ListingEditorScreen()),
+      GoRoute(path: '/owner/edit/:id', builder: (_, s) => ListingEditorScreen(editId: s.pathParameters['id']!)),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     ],
   );

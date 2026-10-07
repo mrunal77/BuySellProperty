@@ -22,7 +22,7 @@ builder.Services.AddSwaggerGen(o =>
     {
         Title = "BuySellProperty API",
         Version = "v1",
-        Description = "99acres-inspired property marketplace (modular monolith).",
+        Description = "Property marketplace (modular monolith).",
     });
     o.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
     {

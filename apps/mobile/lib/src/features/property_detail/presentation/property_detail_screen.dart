@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../search/data/properties_api.dart';
+import '../../listing_editor/domain/property_type_config.dart';
 import '../../../core/browse_widgets.dart';
 import '../../../core/auth_store.dart';
 import '../../../core/network.dart';
+import '../../../core/validators.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String id;
@@ -306,6 +308,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
         error: (e, _) => BrowseError(error: e, onRetry: () => ref.invalidate(propertyDetailProvider(widget.id))),
         data: (p) {
           final images = p.imageUrls;
+          final auth = ref.read(authStoreProvider);
+          final isOwner = auth.isLoggedIn && p.ownerId != null && auth.userId == p.ownerId;
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,6 +375,11 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       const SizedBox(height: 16),
                       Text('₹${p.price.toStringAsFixed(0)}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary)),
 
+                      if (isOwner) ...[
+                        const SizedBox(height: 16),
+                        _OwnerManageBar(property: p, ref: ref),
+                      ],
+
                       const SizedBox(height: 16),
                       // Spec Chips Grid
                       Row(
@@ -389,6 +398,13 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           spacing: 8, runSpacing: 8,
                           children: p.amenities.map((a) => Chip(avatar: const Icon(Icons.star, size: 14), label: Text(a))).toList(),
                         ),
+                      ],
+
+                      if (p.details != null && p.details!.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        const Text('Property Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        ..._renderDetails(p),
                       ],
 
                       if (p.description != null && p.description!.isNotEmpty) ...[
@@ -466,6 +482,56 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     );
   }
 
+  List<Widget> _renderDetails(PropertyDto p) {
+    final type = PropertyType.tryFromApi(p.propertyType);
+    final details = p.details!;
+    final rows = <Widget>[];
+
+    void addRow(String key, dynamic v, FieldDef? def) {
+      if (v == null) return;
+      String txt;
+      if (v is bool) {
+        if (!v) return;
+        txt = 'Yes';
+      } else if (v is num) {
+        txt = v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
+        if (def?.unit != null) txt = '$txt ${def!.unit}';
+      } else {
+        txt = '$v';
+      }
+      rows.add(Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 150,
+              child: Text(labelForKey(key),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            Expanded(child: Text(txt, style: const TextStyle(fontSize: 13))),
+          ],
+        ),
+      ));
+    }
+
+    if (type != null) {
+      final config = fieldsFor(type);
+      for (final f in config) {
+        if (f.type == FieldType.amenities) continue;
+        if (details.containsKey(f.key)) addRow(f.key, details[f.key], f);
+      }
+      details.forEach((k, v) {
+        if (fieldDefForKey(k) != null) return;
+        addRow(k, v, null);
+      });
+    } else {
+      details.forEach((k, v) => addRow(k, v, null));
+    }
+    return rows;
+  }
+
   Widget _specCard(String title, String val) {
     return Expanded(
       child: Container(
@@ -483,6 +549,135 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
             Text(val, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Owner-only status badge + quick management actions on the property detail page.
+class _OwnerManageBar extends ConsumerWidget {
+  final PropertyDto property;
+  final WidgetRef ref;
+  const _OwnerManageBar({required this.property, required this.ref});
+
+  static const _statusColors = {
+    'Draft': (Colors.orange, Colors.orange),
+    'Active': (Colors.green, Colors.green),
+    'Sold': (Colors.red, Colors.red),
+    'Rented': (Colors.blue, Colors.blue),
+    'Paused': (Colors.grey, Colors.grey),
+    'Expired': (Colors.orange, Colors.orange),
+    'Rejected': (Colors.red, Colors.red),
+  };
+
+  Future<bool> _confirm(BuildContext context, String title, String message, String label) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(label)),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _run(BuildContext context, String action, Future<void> Function() fn) async {
+    final p = property;
+    String title, msg, label;
+    switch (action) {
+      case 'sold':
+        title = 'Mark as Sold'; msg = 'Mark "${p.title}" as sold? It will be hidden from public search.'; label = 'Mark Sold'; break;
+      case 'rented':
+        title = 'Mark as Rented'; msg = 'Mark "${p.title}" as rented? It will be hidden from public search.'; label = 'Mark Rented'; break;
+      case 'pause':
+        title = 'Pause Listing'; msg = 'Pause "${p.title}"? It will be hidden until republished.'; label = 'Pause'; break;
+      case 'delete':
+        title = 'Delete Listing'; msg = 'Delete "${p.title}"? This cannot be undone.'; label = 'Delete'; break;
+      case 'publish':
+        title = 'Publish Listing'; msg = 'Publish "${p.title}"? It will be visible to buyers.'; label = 'Publish'; break;
+      default:
+        return;
+    }
+    if (!await _confirm(context, title, msg, label)) return;
+    try {
+      await fn();
+      ref.invalidate(propertyDetailProvider(p.id));
+      ref.invalidate(propertySearchProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$title successful.')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e, 'Action failed.'))));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = property.status;
+    final (bg, fg) = _statusColors[status] ?? (Colors.orange, Colors.orange);
+    final canPublish = status == 'Draft' || status == 'Paused';
+    final isActiveOrPaused = status == 'Active' || status == 'Paused';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.settings, size: 16, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 6),
+              Text('Manage Listing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Theme.of(context).colorScheme.primary)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: bg.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                child: Text(status.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (canPublish)
+                _actionBtn(Icons.publish, 'Publish', Colors.green, () => _run(context, 'publish', () => publishProperty(ref, property.id))),
+              if (isActiveOrPaused) ...[
+                _actionBtn(Icons.check_circle_outline, 'Sold', Colors.red, () => _run(context, 'sold', () => markPropertySold(ref, property.id))),
+                _actionBtn(Icons.key, 'Rented', Colors.blue, () => _run(context, 'rented', () => markPropertyRented(ref, property.id))),
+                _actionBtn(Icons.pause_circle_outline, 'Pause', Colors.grey, () => _run(context, 'pause', () => pauseProperty(ref, property.id))),
+              ],
+              _actionBtn(Icons.edit_outlined, 'Edit', Colors.blue, () => context.push('/owner/edit/${property.id}')),
+              _actionBtn(Icons.delete_outline, 'Delete', Colors.red, () => _run(context, 'delete', () => deleteProperty(ref, property.id))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionBtn(IconData icon, String label, Color color, VoidCallback onTap) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16, color: color),
+      label: Text(label, style: TextStyle(fontSize: 12, color: color)),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        visualDensity: VisualDensity.compact,
+        side: BorderSide(color: color.withValues(alpha: 0.4)),
       ),
     );
   }
