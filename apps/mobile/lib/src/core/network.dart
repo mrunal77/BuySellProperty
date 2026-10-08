@@ -4,16 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_store.dart';
 import 'logger.dart';
 
-const apiBaseUrl = String.fromEnvironment(
+const _defaultApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:5000',
+  defaultValue: 'http://localhost:5182',
 );
+
+/// Resolves `localhost` / `127.0.0.1` to `10.0.2.2` when running natively on Android (emulator host loopback).
+String resolveApiBaseUrl(String url) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    return url.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
+  }
+  return url;
+}
+
+final String apiBaseUrl = resolveApiBaseUrl(_defaultApiBaseUrl);
 
 String normalizeImageUrl(String? url) {
   if (url == null || url.trim().isEmpty) return '';
   final trimmed = url.trim();
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
+    return resolveApiBaseUrl(trimmed);
   }
   if (trimmed.startsWith('/')) {
     return '$apiBaseUrl$trimmed';

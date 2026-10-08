@@ -17,11 +17,14 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
     [HttpGet]
     [AllowAnonymous]
     public async Task<IResult> Search(
-        [FromQuery] Guid? cityId, [FromQuery] string? city, [FromQuery] Guid? localityId,
+        [FromQuery] string? keyword,
+        [FromQuery] Guid? cityId, [FromQuery] string? city, [FromQuery] Guid? localityId, [FromQuery] string? locality,
         [FromQuery] PropertyType? type, [FromQuery] ListingType? listingType,
         [FromQuery] decimal? minPrice, [FromQuery] decimal? maxPrice,
         [FromQuery] int? beds, [FromQuery] int? baths,
         [FromQuery] double? minArea, [FromQuery] double? maxArea,
+        [FromQuery] Furnishing? furnishing, [FromQuery] string? facing,
+        [FromQuery] int? postedWithinDays,
         [FromQuery] double? lat, [FromQuery] double? lng, [FromQuery] double? radiusKm,
         [FromQuery] string sort = "newest", [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         [FromQuery] bool mine = false, [FromQuery] Guid? ownerId = null,
@@ -31,7 +34,7 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         pageSize = Math.Clamp(pageSize, 1, 100);
         radiusKm = Math.Min(radiusKm ?? 50, 50);
 
-        var q = db.Properties.AsQueryable();
+        var q = db.Properties.AsNoTracking();
         if (mine)
         {
             var me = CurrentUserId();
@@ -42,6 +45,17 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         {
             q = q.Where(p => p.Status == PropertyStatus.Active);
         }
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var k = keyword.Trim().ToLower();
+            q = q.Where(p => p.Title.ToLower().Contains(k) ||
+                             p.Description.ToLower().Contains(k) ||
+                             p.AddressLine.ToLower().Contains(k) ||
+                             db.Cities.Any(c => c.Id == p.CityId && c.Name.ToLower().Contains(k)) ||
+                             (p.LocalityId != null && db.Localities.Any(l => l.Id == p.LocalityId && l.Name.ToLower().Contains(k))));
+        }
+
         if (ownerId is not null) q = q.Where(p => p.OwnerId == ownerId);
         if (cityId is not null) q = q.Where(p => p.CityId == cityId);
         if (!string.IsNullOrWhiteSpace(city))
@@ -50,6 +64,12 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
             q = q.Where(p => db.Cities.Any(c => c.Id == p.CityId && c.Name.ToLower() == normalizedCity));
         }
         if (localityId is not null) q = q.Where(p => p.LocalityId == localityId);
+        if (!string.IsNullOrWhiteSpace(locality))
+        {
+            var normalizedLoc = locality.Trim().ToLower();
+            q = q.Where(p => p.LocalityId != null && db.Localities.Any(l => l.Id == p.LocalityId && l.Name.ToLower().Contains(normalizedLoc)));
+        }
+
         if (type is not null) q = q.Where(p => p.PropertyType == type);
         if (listingType is not null) q = q.Where(p => p.ListingType == listingType);
         if (minPrice is not null) q = q.Where(p => p.Price >= minPrice);
@@ -58,6 +78,17 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         if (baths is not null) q = q.Where(p => p.Bathrooms >= baths);
         if (minArea is not null) q = q.Where(p => p.AreaSqft >= minArea);
         if (maxArea is not null) q = q.Where(p => p.AreaSqft <= maxArea);
+        if (furnishing is not null) q = q.Where(p => p.Furnishing == furnishing);
+        if (!string.IsNullOrWhiteSpace(facing))
+        {
+            var normalizedFacing = facing.Trim().ToLower();
+            q = q.Where(p => p.Facing != null && p.Facing.ToLower() == normalizedFacing);
+        }
+        if (postedWithinDays is not null && postedWithinDays.Value > 0)
+        {
+            var cutoff = DateTimeOffset.UtcNow.AddDays(-postedWithinDays.Value);
+            q = q.Where(p => p.CreatedAt >= cutoff);
+        }
 
         // Geo: PostGIS ST_DWithin in production; Haversine fallback here keeps it DB-agnostic for MVP/tests.
         if (lat is not null && lng is not null && radiusKm is not null)
@@ -71,13 +102,14 @@ public sealed class PropertiesController(AppDbContext db) : ControllerBase
         {
             "price_asc" => q.OrderBy(p => p.Price),
             "price_desc" => q.OrderByDescending(p => p.Price),
+            "area_asc" => q.OrderBy(p => p.AreaSqft),
             "area_desc" => q.OrderByDescending(p => p.AreaSqft),
             _ => q.OrderByDescending(p => p.CreatedAt),
         };
 
         var total = await q.LongCountAsync(ct);
         var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
-        
+
         var ownerIds = items.Select(x => x.OwnerId).Distinct().ToList();
         var ownersMap = await db.Users.AsNoTracking()
             .Where(u => ownerIds.Contains(u.Id))

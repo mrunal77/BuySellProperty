@@ -21,21 +21,34 @@ const _popularCities = [
   _CityItem('Ahmedabad', 'https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=500&auto=format&fit=crop&q=80'),
 ];
 
-int _matchCityCount(List<CityDto> cities, String popularName) {
+CityDto? _findCity(List<CityDto> cities, String popularName) {
   final key = popularName.split('/').first.trim().toLowerCase();
   for (final c in cities) {
     final n = c.name.toLowerCase();
-    if (n == key || n.startsWith(key) || key.startsWith(n)) return c.propertyCount;
+    if (n == key || n.startsWith(key) || key.startsWith(n)) return c;
   }
-  return 0;
+  return null;
 }
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  Widget _buildCityCard(BuildContext context, _CityItem c, int count) {
+  Widget _buildCityCard(BuildContext context, _CityItem c, List<CityDto> cities) {
+    final matchedCity = _findCity(cities, c.name);
+    final count = matchedCity?.propertyCount ?? 0;
     return InkWell(
-      onTap: () => context.go('/search'),
+      onTap: () {
+        final queryParams = <String, String>{};
+        if (matchedCity != null) {
+          queryParams['cityId'] = matchedCity.id;
+          queryParams['cityName'] = matchedCity.name;
+        } else {
+          final cleanName = c.name.split('/').first.trim();
+          queryParams['cityName'] = cleanName;
+        }
+        final uri = Uri(path: '/search', queryParameters: queryParams);
+        context.go(uri.toString());
+      },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 250,
@@ -119,31 +132,104 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // HERO
+            // HERO SEARCH CARD
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [cs.primary, cs.primaryContainer]),
+                gradient: LinearGradient(
+                  colors: [cs.primary, cs.primaryContainer],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     auth.isLoggedIn ? 'Hello, ${auth.email}' : 'Find a place you’ll love',
-                    style: TextStyle(color: cs.onPrimary, fontSize: wide ? 28 : 22, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: cs.onPrimary, fontSize: wide ? 26 : 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text('Buy, rent or list — thousands of verified homes.',
-                      style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.85))),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
+                  Text(
+                    'Buy, rent or list — thousands of verified homes.',
+                    style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.85), fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Interactive Search Input Trigger
+                  InkWell(
+                    onTap: () => context.go('/search'),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search, color: cs.primary, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Search locality, city or keyword...',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: cs.primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.tune, size: 18, color: cs.onPrimaryContainer),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Quick Mode Buttons
+                  Row(
                     children: [
                       _heroBtn(context, 'Buy', () => context.go('/search?listingType=Sale')),
+                      const SizedBox(width: 8),
                       _heroBtn(context, 'Rent', () => context.go('/search?listingType=Rent')),
+                      const SizedBox(width: 8),
                       _heroBtn(context, 'Commercial', () => context.go('/search?type=Commercial')),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Property Type Quick Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _typeChip(context, 'Apartment', 'Apartment'),
+                        _typeChip(context, 'House', 'IndependentHouse'),
+                        _typeChip(context, 'Villa', 'Villa'),
+                        _typeChip(context, 'Plot', 'Plot'),
+                        _typeChip(context, 'Shop', 'Shop'),
+                        _typeChip(context, 'Office', 'Office'),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -193,10 +279,10 @@ class HomeScreen extends ConsumerWidget {
                       : null;
                   return Column(
                     children: [
-                      _buildCityCard(context, item1, _matchCityCount(cities, item1.name)),
+                      _buildCityCard(context, item1, cities),
                       if (item2 != null) ...[
                         const SizedBox(height: 10),
-                        _buildCityCard(context, item2, _matchCityCount(cities, item2.name)),
+                        _buildCityCard(context, item2, cities),
                       ],
                     ],
                   );
@@ -235,9 +321,35 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _heroBtn(BuildContext context, String label, VoidCallback onTap) {
     return FilledButton.tonal(
-      style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Theme.of(context).colorScheme.primary),
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      ),
       onPressed: onTap,
-      child: Text(label),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+    );
+  }
+
+  Widget _typeChip(BuildContext context, String label, String apiType) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: () => context.go('/search?type=$apiType'),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -103,39 +103,116 @@ class LocalityDto {
 
 /// Value-type search query (stable ==/hashCode so Riverpod caches correctly).
 class PropertyQuery {
+  final String? keyword;
   final String? listingType;
   final String? cityId;
+  final String? city;
+  final String? localityId;
+  final String? locality;
   final String? type;
-  final int? beds;
+  final double? minPrice;
   final double? maxPrice;
+  final double? minArea;
+  final double? maxArea;
+  final int? beds;
+  final int? baths;
+  final String? furnishing;
+  final String? facing;
+  final int? postedWithinDays;
+  final List<String>? amenities;
   final int page;
   final int pageSize;
   final bool mine;
   final String sort;
+
   const PropertyQuery({
-    this.listingType, this.cityId, this.type, this.beds, this.maxPrice,
-    this.page = 1, this.pageSize = 20, this.mine = false, this.sort = 'newest',
+    this.keyword,
+    this.listingType,
+    this.cityId,
+    this.city,
+    this.localityId,
+    this.locality,
+    this.type,
+    this.minPrice,
+    this.maxPrice,
+    this.minArea,
+    this.maxArea,
+    this.beds,
+    this.baths,
+    this.furnishing,
+    this.facing,
+    this.postedWithinDays,
+    this.amenities,
+    this.page = 1,
+    this.pageSize = 20,
+    this.mine = false,
+    this.sort = 'newest',
   });
 
   Map<String, dynamic> toMap() => {
-    if (listingType != null) 'listingType': listingType,
-    if (cityId != null) 'cityId': cityId,
-    if (type != null) 'type': type,
-    if (beds != null) 'beds': beds,
-    if (maxPrice != null) 'maxPrice': maxPrice,
-    'sort': sort, 'page': page, 'pageSize': pageSize,
-    if (mine) 'mine': true,
-  };
+        if (keyword != null && keyword!.trim().isNotEmpty) 'keyword': keyword!.trim(),
+        if (listingType != null) 'listingType': listingType,
+        if (cityId != null) 'cityId': cityId,
+        if (city != null) 'city': city,
+        if (localityId != null) 'localityId': localityId,
+        if (locality != null) 'locality': locality,
+        if (type != null) 'type': type,
+        if (minPrice != null) 'minPrice': minPrice,
+        if (maxPrice != null) 'maxPrice': maxPrice,
+        if (minArea != null) 'minArea': minArea,
+        if (maxArea != null) 'maxArea': maxArea,
+        if (beds != null) 'beds': beds,
+        if (baths != null) 'baths': baths,
+        if (furnishing != null) 'furnishing': furnishing,
+        if (facing != null) 'facing': facing,
+        if (postedWithinDays != null) 'postedWithinDays': postedWithinDays,
+        if (amenities != null && amenities!.isNotEmpty) 'amenities': amenities!.join(','),
+        'sort': sort,
+        'page': page,
+        'pageSize': pageSize,
+        if (mine) 'mine': true,
+      };
 
   @override
   bool operator ==(Object other) =>
       other is PropertyQuery &&
-      other.listingType == listingType && other.cityId == cityId && other.type == type &&
-      other.beds == beds && other.maxPrice == maxPrice && other.page == page &&
-      other.pageSize == pageSize && other.mine == mine && other.sort == sort;
+      other.keyword == keyword &&
+      other.listingType == listingType &&
+      other.cityId == cityId &&
+      other.city == city &&
+      other.localityId == localityId &&
+      other.locality == locality &&
+      other.type == type &&
+      other.minPrice == minPrice &&
+      other.maxPrice == maxPrice &&
+      other.minArea == minArea &&
+      other.maxArea == maxArea &&
+      other.beds == beds &&
+      other.baths == baths &&
+      other.furnishing == furnishing &&
+      other.facing == facing &&
+      other.postedWithinDays == postedWithinDays &&
+      _listEquals(other.amenities, amenities) &&
+      other.page == page &&
+      other.pageSize == pageSize &&
+      other.mine == mine &&
+      other.sort == sort;
 
   @override
-  int get hashCode => Object.hash(listingType, cityId, type, beds, maxPrice, page, pageSize, mine, sort);
+  int get hashCode => Object.hashAll([
+        keyword, listingType, cityId, city, localityId, locality, type,
+        minPrice, maxPrice, minArea, maxArea, beds, baths, furnishing,
+        facing, postedWithinDays, Object.hashAll(amenities ?? []), page, pageSize, mine, sort,
+      ]);
+
+  static bool _listEquals(List<String>? a, List<String>? b) {
+    if (a == null) return b == null;
+    if (b == null || a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }
 
 final propertySearchProvider = FutureProvider.family<Map<String, dynamic>, PropertyQuery>((ref, q) async {
@@ -248,7 +325,7 @@ Future<String> uploadImage(WidgetRef ref, String filePath) async {
   final fileName = filePath.split('/').last;
   final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'jpeg';
   final mimeSubtype = (ext == 'png' || ext == 'webp' || ext == 'gif') ? ext : 'jpeg';
-  
+
   final formData = FormData.fromMap({
     'file': await MultipartFile.fromFile(
       filePath,

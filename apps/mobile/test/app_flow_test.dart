@@ -3,6 +3,7 @@ import 'package:buysell_mobile/src/core/network.dart';
 import 'package:buysell_mobile/src/features/favorites/presentation/favorites_screen.dart';
 import 'package:buysell_mobile/src/features/profile/presentation/profile_screen.dart';
 import 'package:buysell_mobile/src/features/search/data/properties_api.dart';
+import 'package:buysell_mobile/src/features/search/presentation/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,13 +13,15 @@ const _sampleProperty = {
   'id': 'prop-101',
   'title': 'Luxury Sea View Villa',
   'price': 15000000,
+  'cityId': 'city-mumbai',
+  'city': 'Mumbai',
   'propertyType': 'Villa',
   'listingType': 'Sale',
   'areaSqft': 2500,
   'bedrooms': 3,
   'imageUrls': [
-    'http://localhost:5000/uploads/test_villa.jpg',
-    'http://localhost:5000/uploads/test_villa_2.jpg'
+    'http://localhost:5182/uploads/test_villa.jpg',
+    'http://localhost:5182/uploads/test_villa_2.jpg'
   ],
 };
 
@@ -67,9 +70,9 @@ void main() {
       expect(normalizeImageUrl(null), '');
       expect(normalizeImageUrl(''), '');
       expect(normalizeImageUrl('https://images.unsplash.com/photo-1'), 'https://images.unsplash.com/photo-1');
-      expect(normalizeImageUrl('http://localhost:5000/uploads/img.jpg'), 'http://localhost:5000/uploads/img.jpg');
-      expect(normalizeImageUrl('/uploads/img.jpg'), 'http://localhost:5000/uploads/img.jpg');
-      expect(normalizeImageUrl('uploads/img.jpg'), 'http://localhost:5000/uploads/img.jpg');
+      expect(normalizeImageUrl('http://localhost:5182/uploads/img.jpg'), 'http://10.0.2.2:5182/uploads/img.jpg');
+      expect(normalizeImageUrl('/uploads/img.jpg'), 'http://10.0.2.2:5182/uploads/img.jpg');
+      expect(normalizeImageUrl('uploads/img.jpg'), 'http://10.0.2.2:5182/uploads/img.jpg');
     });
 
     testWidgets('PropertyCard renders title, price, BHK, and photo count badge', (tester) async {
@@ -139,6 +142,54 @@ void main() {
       await tester.pageBack();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Luxury Sea View Villa'), findsOneWidget);
+    });
+
+    testWidgets('SearchScreen shows empty city message and recommendations when city has no properties', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            citiesProvider.overrideWith((ref) async => [
+                  CityDto.fromJson(const {'id': 'city-pune', 'name': 'Pune', 'propertyCount': 0}),
+                ]),
+            propertySearchProvider.overrideWith((ref, q) async {
+              if (q.cityId == 'city-pune' || q.city == 'Pune') {
+                return {'data': [], 'total': 0};
+              }
+              return {
+                'data': [_sampleProperty],
+                'total': 1
+              };
+            }),
+            favoritesProvider.overrideWith((ref) async => []),
+          ],
+          child: MaterialApp.router(
+            routerConfig: GoRouter(
+              initialLocation: '/search?cityId=city-pune&cityName=Pune',
+              routes: [
+                GoRoute(
+                  path: '/search',
+                  builder: (_, s) => SearchScreen(
+                    initialCityId: s.uri.queryParameters['cityId'],
+                    initialCityName: s.uri.queryParameters['cityName'],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('No properties found in Pune'), findsOneWidget);
+      expect(find.text('Recommended Properties from Other Cities'), findsOneWidget);
+
+      await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+      await tester.pump();
 
       expect(find.text('Luxury Sea View Villa'), findsOneWidget);
     });

@@ -40,8 +40,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/search',
         builder: (_, s) => SearchScreen(
+          initialKeyword: s.uri.queryParameters['keyword'],
           initialListingType: s.uri.queryParameters['listingType'],
           initialType: s.uri.queryParameters['type'],
+          initialCityId: s.uri.queryParameters['cityId'],
+          initialCityName: s.uri.queryParameters['cityName'],
         ),
       ),
       GoRoute(path: '/p/:id', builder: (_, s) => PropertyDetailScreen(id: s.pathParameters['id']!)),

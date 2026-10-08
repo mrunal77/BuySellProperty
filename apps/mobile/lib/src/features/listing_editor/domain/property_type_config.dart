@@ -362,4 +362,106 @@ const availableAmenities = [
   'Power Backup',
   'Reserved Parking',
   'Clubhouse',
+  'Lift',
+  'Park / Garden',
+  'Gas Pipeline',
+  'CCTV Surveillance',
+  'Intercom',
+  'Children Play Area',
+  'Fire Safety',
+  'Wi-Fi / Internet',
+  'Maintenance Staff',
 ];
+
+/// Configuration specifying which search filters are applicable for a given property type.
+class PropertySearchFilterConfig {
+  final PropertyType? propertyType;
+  final bool showBhk;
+  final bool showBathrooms;
+  final bool showFurnishing;
+  final bool showFacing;
+  final bool showFloor;
+  final bool showParking;
+  final bool showAmenities;
+
+  const PropertySearchFilterConfig({
+    this.propertyType,
+    this.showBhk = true,
+    this.showBathrooms = true,
+    this.showFurnishing = true,
+    this.showFacing = true,
+    this.showFloor = true,
+    this.showParking = true,
+    this.showAmenities = true,
+  });
+
+  factory PropertySearchFilterConfig.forType(PropertyType? type) {
+    if (type == null) {
+      return const PropertySearchFilterConfig();
+    }
+    switch (type) {
+      case PropertyType.apartment:
+      case PropertyType.independentHouse:
+      case PropertyType.villa:
+      case PropertyType.farmhouse:
+      case PropertyType.studio:
+        return PropertySearchFilterConfig(
+          propertyType: type,
+          showBhk: true,
+          showBathrooms: true,
+          showFurnishing: true,
+          showFacing: true,
+          showFloor: true,
+          showParking: true,
+          showAmenities: true,
+        );
+      case PropertyType.pg:
+        return PropertySearchFilterConfig(
+          propertyType: type,
+          showBhk: false,
+          showBathrooms: true,
+          showFurnishing: true,
+          showFacing: false,
+          showFloor: true,
+          showParking: true,
+          showAmenities: true,
+        );
+      case PropertyType.shop:
+      case PropertyType.office:
+      case PropertyType.commercial:
+        return PropertySearchFilterConfig(
+          propertyType: type,
+          showBhk: false,
+          showBathrooms: true,
+          showFurnishing: true,
+          showFacing: true,
+          showFloor: true,
+          showParking: true,
+          showAmenities: true,
+        );
+      case PropertyType.plot:
+        return PropertySearchFilterConfig(
+          propertyType: type,
+          showBhk: false,
+          showBathrooms: false,
+          showFurnishing: false,
+          showFacing: true,
+          showFloor: false,
+          showParking: false,
+          showAmenities: false,
+        );
+      case PropertyType.warehouse:
+      case PropertyType.industrial:
+        return PropertySearchFilterConfig(
+          propertyType: type,
+          showBhk: false,
+          showBathrooms: true,
+          showFurnishing: false,
+          showFacing: true,
+          showFloor: false,
+          showParking: true,
+          showAmenities: true,
+        );
+    }
+  }
+}
